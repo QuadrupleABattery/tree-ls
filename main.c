@@ -43,7 +43,6 @@ struct dirent *pop_from_file_buffer(struct file_buffer *buffer) {
 	return file;
 }
 
-
 void process_arguments(int argc, char **arguments, char *argFlags[ARGUMENT_COUNT]) {
 	for (int arg = 1; arg < argc; arg++) {
 		char *value = arguments[arg];
@@ -58,11 +57,17 @@ void process_arguments(int argc, char **arguments, char *argFlags[ARGUMENT_COUNT
 	}
 }
 
-void print_file(struct dirent *file, int indents) {
-	printf("%s\n", file -> d_name);
+void color_print(char *text, char *color) {
+	printf("%s%s", color, text);
 }
 
-void process_directory(char *path, int indents, char *argFlags[ARGUMENT_COUNT]) {
+void repeat_print(int repeats, char *text, char *color) {
+	for (int i = 0; i < repeats; i++) {
+		color_print(text, color);
+	}
+}
+
+void process_directory(char *path, int indents, char *argFlags[ARGUMENT_COUNT], int directoryLines) {
 	int showHidden = strcmp(argFlags[ARG_SHOW_HIDDEN], "1") == 0;
 	int recursive = strcmp(argFlags[ARG_RECURSIVE], "1") == 0;
 
@@ -87,16 +92,39 @@ void process_directory(char *path, int indents, char *argFlags[ARGUMENT_COUNT]) 
 
 	for (int i = 0; i < buffer.size; i++) {
 		struct dirent *file = buffer.data[i];
+		char *fileName = file -> d_name;
+		
+		repeat_print(indents - 1, "┃ ", "\e[0;36m");
 
-		print_file(file, indents);
+		if (i == buffer.size - 1) {
+			color_print("┗━", "\e[0;36m");
+		} else {
+			color_print("┣━", "\e[0;36m");
+		}
+		color_print(fileName, "\e[0;37m");
+		printf("\n");
+
+		if (file -> d_type == DT_DIR) {
+			int pathLength = strlen(path) + strlen(fileName) + 2; // +2 for null terminators
+			char subDirectoryPath[pathLength];
+
+			snprintf(subDirectoryPath, pathLength, "%s/%s", path, fileName);
+			process_directory(subDirectoryPath, indents + 1, argFlags);
+		}
 	}
 }
 
 
 int main(int argc, char **argv) {
 	char *argFlags[ARGUMENT_COUNT] = {".", "0", "0"};
+	
 
 	process_arguments(argc, argv, argFlags);
+	color_print(argFlags[ARG_PATH], "\e[0;36m");
+	printf("\n");
+	color_print("┃", "\e[0;36m");
+	printf("\n");
+	process_directory(argFlags[ARG_PATH], 1, argFlags);
 
-	process_directory(argFlags[ARG_PATH], 0, argFlags);
+	return 0;
 }
