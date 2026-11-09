@@ -67,7 +67,7 @@ void repeat_print(int repeats, char *text, char *color) {
 	}
 }
 
-void process_directory(char *path, int indents, char *argFlags[ARGUMENT_COUNT], int directoryLines) {
+void process_directory(char *path, int indents, char *argFlags[ARGUMENT_COUNT], char *directoryLines) {
 	int showHidden = strcmp(argFlags[ARG_SHOW_HIDDEN], "1") == 0;
 	int recursive = strcmp(argFlags[ARG_RECURSIVE], "1") == 0;
 
@@ -94,22 +94,28 @@ void process_directory(char *path, int indents, char *argFlags[ARGUMENT_COUNT], 
 		struct dirent *file = buffer.data[i];
 		char *fileName = file -> d_name;
 		
-		repeat_print(indents - 1, "┃ ", "\e[0;36m");
-
+		int subDirectoryLineSize = strlen(directoryLines) + 5;
+		char subDirectoryLines[subDirectoryLineSize];
+		
+		printf("\e[0;36m%s", directoryLines); 
+		
 		if (i == buffer.size - 1) {
 			color_print("┗━", "\e[0;36m");
+			snprintf(subDirectoryLines, subDirectoryLineSize, "%s  ", directoryLines);
 		} else {
 			color_print("┣━", "\e[0;36m");
+			snprintf(subDirectoryLines, subDirectoryLineSize, "%s┃ ", directoryLines);
 		}
+
 		color_print(fileName, "\e[0;37m");
 		printf("\n");
 
-		if (file -> d_type == DT_DIR) {
+		if (recursive && file -> d_type == DT_DIR) {
 			int pathLength = strlen(path) + strlen(fileName) + 2; // +2 for null terminators
 			char subDirectoryPath[pathLength];
 
 			snprintf(subDirectoryPath, pathLength, "%s/%s", path, fileName);
-			process_directory(subDirectoryPath, indents + 1, argFlags);
+			process_directory(subDirectoryPath, indents + 1, argFlags, subDirectoryLines);
 		}
 	}
 }
@@ -118,13 +124,12 @@ void process_directory(char *path, int indents, char *argFlags[ARGUMENT_COUNT], 
 int main(int argc, char **argv) {
 	char *argFlags[ARGUMENT_COUNT] = {".", "0", "0"};
 	
-
 	process_arguments(argc, argv, argFlags);
 	color_print(argFlags[ARG_PATH], "\e[0;36m");
 	printf("\n");
 	color_print("┃", "\e[0;36m");
 	printf("\n");
-	process_directory(argFlags[ARG_PATH], 1, argFlags);
+	process_directory(argFlags[ARG_PATH], 1, argFlags, "");
 
 	return 0;
 }
