@@ -1,1 +1,0 @@
-alias build="gcc -o main main.c" && alias run="./main"
